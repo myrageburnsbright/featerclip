@@ -3,7 +3,9 @@ from tkinter import ttk
 import sys
 from process import CpuBar
 from widget_update import Configure_widjets
-
+import json
+import signal
+import os
 
 class EntryFrame(ttk.Entry):
     def __init__(self, master, text):
@@ -35,6 +37,13 @@ class EntryFrame(ttk.Entry):
         self.root.clipboard_append(self.entry.get())
         self.update()
 
+def find_all_children_of_type(widget, cls):
+    found = []
+    for child in widget.winfo_children():
+        if isinstance(child, cls):
+            found.append(child)
+    return found
+
 class Application(tk.Tk, Configure_widjets):
 
     def __init__(self):
@@ -44,7 +53,8 @@ class Application(tk.Tk, Configure_widjets):
         self.attributes('-topmost', True)
         self.overrideredirect(True)
         self.resizable(False, False)
-        self.title('CPU-RAM usage monitor bar')
+
+        self.title(f'CPU-RAM usage monitor bar - pid:{os.getpid()}')
 
         self.cpu = CpuBar()
         self.style = ttk.Style()
@@ -67,7 +77,7 @@ class Application(tk.Tk, Configure_widjets):
 
     def set_ui(self):
         """Build basic widgets and events."""
-        ttk.Label(self, text='Featherclip + mini CPU RAM').pack(fill=tk.X)
+        ttk.Label(self, text=f'Featherclip + mini CPU RAM - pid:{os.getpid()}').pack(fill=tk.X)
         self.bar2 = ttk.LabelFrame(self, text='Manual')
         self.bar2.pack(fill=tk.X)
 
@@ -110,8 +120,10 @@ class Application(tk.Tk, Configure_widjets):
         self.clipborad_count = ttk.Label(self.bar1, text=f'{self.cnt} inputs:', anchor=tk.CENTER)
         self.clipborad_count.pack(fill=tk.X)
 
-        for i in range(default_cnt):
-            self.add_new_frame()
+        with open("clipboards.json", "r", encoding="utf-8") as f:
+            history = json.load(f)
+        for text in history:
+            self.add_new_frame(text)
         add = ttk.Button(self.barManager, text="add from clipboard", command=self.add_from_clipboard)
         add.pack(fill=tk.X)
 
@@ -239,11 +251,31 @@ class Application(tk.Tk, Configure_widjets):
             self.update()
             self.make_minimal_win()
 
+    def save_all(self, reserve=False):
+        entries = find_all_children_of_type(self.bar1, EntryFrame)
+        print(len(entries))
+        for entry in entries:
+            print(entry.entry.get())
+        history = [entry.entry.get() for entry in entries]
+        if not reserve:
+            with open("clipboards.json", "w", encoding="utf-8") as f:
+                json.dump(history[-50:], f)
+        else:
+            with open("clipboards_reserve.json", "w", encoding="utf-8") as f:
+                json.dump(history[-50:], f)
     def app_exit(self):
-        """Exit."""
+        self.save_all()
         self.destroy()
         sys.exit()
 
 if __name__ == '__main__':
     root = Application()
+    root.protocol("WM_DELETE_WINDOW", root.app_exit)
+    def handle_sigint(signum, frame):
+        root.save_all(reserve=True)
+        root.destroy()
+
+    signal.signal(signal.SIGINT, handle_sigint)
+    
     root.mainloop()
+
