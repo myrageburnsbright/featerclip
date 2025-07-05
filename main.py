@@ -1,5 +1,3 @@
-"""The main module. The module builds the GUI and application events."""
-
 import tkinter as tk
 from tkinter import ttk
 import sys
@@ -7,8 +5,37 @@ from process import CpuBar
 from widget_update import Configure_widjets
 
 
+class EntryFrame(ttk.Entry):
+    def __init__(self, master, text):
+        ttk.Frame.__init__(self, master)
+        self.master = master
+        self.entry = ttk.Entry(self)
+        self.entry.insert(0, text)
+        del_btn = ttk.Button(self, text="X", width=0, command=self.delete)
+        del_btn.pack(side="left")
+        self.entry.pack(side="left", expand=True, fill="both")
+        self.pack(fill=tk.X)
+        self.root = master.master
+        self.entry.bind("<Enter>", self.on_enter)
+        self.entry.bind("<Leave>", self.on_leave)
+    
+    def delete(self):
+        self.master.master.del_frame()
+        self.destroy()
+
+    def on_enter(self, event):
+        self.change_text()
+        self.entry.configure(style='ChosenField.TEntry')
+
+    def on_leave(self, event):
+        self.entry.configure(style='DefualtFieldColor.TEntry')
+
+    def change_text(self):
+        self.root.clipboard_clear()
+        self.root.clipboard_append(self.entry.get())
+        self.update()
+
 class Application(tk.Tk, Configure_widjets):
-    """Builds GUI."""
 
     def __init__(self):
         """Create window."""
@@ -20,6 +47,12 @@ class Application(tk.Tk, Configure_widjets):
         self.title('CPU-RAM usage monitor bar')
 
         self.cpu = CpuBar()
+        self.style = ttk.Style()
+        self.style.theme_use('clam')
+
+        self.style.configure('DefualtFieldColor.TEntry', fieldbackground='white')
+        self.style.configure('ChosenField.TEntry', fieldbackground='red')
+
         self.run_set_ui()
 
     def run_set_ui(self):
@@ -52,10 +85,10 @@ class Application(tk.Tk, Configure_widjets):
 
         ttk.Button(self.bar2, text='Exit', command=self.app_exit).pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
 
-        self.bar1 = ttk.LabelFrame(self, text='Clipboard')
-        self.bar1.pack(fill=tk.BOTH)
         self.barManager = ttk.LabelFrame(self, text='Manager')
         self.barManager.pack(fill=tk.BOTH)
+        self.bar1 = ttk.LabelFrame(self, text='Clipboard')
+        self.bar1.pack(fill=tk.BOTH)
 
         self.bar = ttk.LabelFrame(self, text='Power')
         self.bar.pack(fill=tk.BOTH)
@@ -71,42 +104,35 @@ class Application(tk.Tk, Configure_widjets):
         self.combo_win.current(0)
     def make_word_list(self):
         """Creation of progress bars and labels to indicate the load of the CPU and RAM."""
-        self.cnt = 0
+        default_cnt=5
+        self.cnt=0
+        
         self.clipborad_count = ttk.Label(self.bar1, text=f'{self.cnt} inputs:', anchor=tk.CENTER)
         self.clipborad_count.pack(fill=tk.X)
 
-        self.buttons = []
-        self.inputs = []
-        default_cnt=5
         for i in range(default_cnt):
-            self.add_new_copy_frame(i)
+            self.add_new_frame()
         add = ttk.Button(self.barManager, text="add from clipboard", command=self.add_from_clipboard)
         add.pack(fill=tk.X)
 
-    def add_new_copy_frame(self, i, text=""):
-        fr = ttk.Frame(self.bar1)
-        
-        entry = ttk.Entry(fr)
-        entry.insert(0, text)
-        self.inputs.append(entry)
-        self.buttons.append(ttk.Button(fr,text="copy", command= lambda x=i: self.change_text(x)))
+    def add_new_frame(self, text=""):
+        fr = EntryFrame(self.bar1, text)
         self.cnt += 1
         self.clipborad_count.configure(text=f'{self.cnt} inputs')
-
-        self.buttons[i].pack(side="left", expand=True, fill="both")
-        self.inputs[i].pack(side="left", expand=True, fill="both")
         fr.pack(fill=tk.X)
+
+    def del_frame(self):
+        self.cnt -= 1
+        self.clipborad_count.configure(text=f'{self.cnt} inputs')
 
     def add_from_clipboard(self):
         text = self.clipboard_get()
-        self.add_new_copy_frame(len(self.inputs), text)
+        self.add_new_frame(text)
 
     def change_text(self, i):
         self.clipboard_clear()
         self.clipboard_append(self.inputs[i].get())
         self.update()
-        # self.inputs[i].delete(0, tk.END)
-        # self.inputs[i].insert(0, "ssssss")
 
     def make_bar_cpu_usage(self):
         """Creation of progress bars and labels to indicate the load of the CPU and RAM."""
@@ -139,8 +165,8 @@ class Application(tk.Tk, Configure_widjets):
 
         self.full = ttk.Button(self, text='full', width=5,
                     command=self.full_details)
-        
-        self.full.pack(side=tk.RIGHT)
+
+        self.full.pack(side=tk.RIGHT, expand=True, fill=tk.BOTH)
 
         self.update()
         self.configure_minimal_win()
@@ -153,14 +179,37 @@ class Application(tk.Tk, Configure_widjets):
             self.full.pack_forget()
             self.full.config(text="full")
             self.full.pack(side=tk.LEFT)
+            self.combo.pack_forget()
+            self.combo_chose_color.pack_forget()
+            self.top_hide.pack_forget()
         else:
             self.bar_one.pack_forget()
             self.ram_bar_hide.pack_forget()
+            self.top_hide = ttk.Button(self.bar2, text='Hide', command=self.full_details)
+            self.top_hide.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
             self.bar.pack(side=tk.TOP, fill=tk.BOTH)
             self.full.pack_forget()
             self.full.config(text="hide details")
             self.full.pack(side=tk.BOTTOM, fill=tk.BOTH)
+
+            themes = self.style.theme_names()
+            self.combo = ttk.Combobox(self, values=themes, state="readonly")
+            self.combo.set(self.style.theme_use())
             
+            self.combo.pack(fill=tk.BOTH, side=tk.LEFT)
+            self.combo.bind("<<ComboboxSelected>>", self.change_theme)
+
+            color_names = [
+    'white', 'black', 'red', 'green', 'blue', 'yellow', 'cyan', 'magenta',
+    'gray', 'orange', 'purple', 'pink', 'brown', 'lightblue', 'lightgreen',
+    'navy', 'gold', 'silver', 'maroon', 'lime'
+]
+
+            self.combo_chose_color = ttk.Combobox(self, values=color_names, state="readonly")
+            self.combo_chose_color.set('red')
+            self.combo_chose_color.pack(fill=tk.BOTH, side=tk.LEFT, expand=True)
+            self.combo_chose_color.bind("<<ComboboxSelected>>", self.change_chose_color)
+
     def enter_mouse(self, event):
         """Mouse enter event."""
         if self.combo_win.current() == 0 or 1:
@@ -171,13 +220,15 @@ class Application(tk.Tk, Configure_widjets):
         if self.combo_win.current() == 0:
             self.geometry(f'{self.winfo_width()}x1')
 
+    def change_chose_color(self, event):
+        selected = self.combo_chose_color.get()
+        self.style.configure('ChosenField.TEntry', fieldbackground=selected)
+
+    def change_theme(self, event):
+        selected = self.combo.get()
+        self.style.theme_use(selected)
+
     def choise_combo(self, event):
-        """
-        ComboboxSelected event.
-        Interruption of the cycle of updating widgets.
-        Unbinding events, removing widgets.
-        Create small window widgets.
-        """
         if self.combo_win.current() == 2:
             self.enter_mouse('')
             self.unbind_class('Tk', '<Enter>')
@@ -188,24 +239,10 @@ class Application(tk.Tk, Configure_widjets):
             self.update()
             self.make_minimal_win()
 
-    def make_full_win(self): 
-        """
-        Interruption of the cycle of updating widgets.
-        Removing small window widgets.
-        Renewal of the main GUI.
-        """
-        self.after_cancel(self.wheel)
-        self.clear_win()
-        self.update()
-        self.run_set_ui()
-        self.enter_mouse('')
-        self.combo_win.current(1)
-
     def app_exit(self):
         """Exit."""
         self.destroy()
         sys.exit()
-
 
 if __name__ == '__main__':
     root = Application()
