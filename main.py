@@ -7,6 +7,17 @@ import json
 import signal
 import os
 
+def get_data_folder():
+    appdata = os.getenv('APPDATA')
+    if not appdata:
+        appdata = os.path.expanduser('~')
+    data_folder = os.path.join(appdata, 'MyAppName')
+    os.makedirs(data_folder, exist_ok=True)
+    return data_folder
+
+def get_clipboards_path():
+    return os.path.join(get_data_folder(), 'clipboards.json')
+
 class EntryFrame(ttk.Entry):
     def __init__(self, master, text):
         ttk.Frame.__init__(self, master)
@@ -118,10 +129,12 @@ class Application(tk.Tk, Configure_widjets):
         
         self.clipborad_count = ttk.Label(self.bar1, text=f'{self.cnt} inputs:', anchor=tk.CENTER)
         self.clipborad_count.pack(fill=tk.X)
-        if not os.path.exists("clipboards.json"):
-            with open("clipboards.json", "w", encoding="utf-8") as f:
+        path = get_clipboards_path()
+        print(path)
+        if not os.path.exists(path):
+            with open(path, "w", encoding="utf-8") as f:
                 f.write("{}")
-        with open("clipboards.json", "r", encoding="utf-8") as f:
+        with open(path, "r", encoding="utf-8") as f:
             history = json.load(f)
         for text in history:
             self.add_new_frame(text)
@@ -256,16 +269,17 @@ class Application(tk.Tk, Configure_widjets):
             self.make_minimal_win()
 
     def save_all(self, reserve=False):
+        path = get_clipboards_path()
         entries = find_all_children_of_type(self.bar1, EntryFrame)
         print(len(entries))
         for entry in entries:
             print(entry.entry.get())
         history = [entry.entry.get() for entry in entries]
         if not reserve:
-            with open("clipboards.json", "w", encoding="utf-8") as f:
+            with open(path, "w", encoding="utf-8") as f:
                 json.dump(history[-50:], f)
         else:
-            with open("clipboards_reserve.json", "w", encoding="utf-8") as f:
+            with open(path, "w", encoding="utf-8") as f:
                 json.dump(history[-50:], f)
     def app_exit(self):
         self.save_all()

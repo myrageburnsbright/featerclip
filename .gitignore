@@ -2,3 +2,6 @@ __pycache__/
 venv/
 clipboards.json
 clipboards_reserve.json
+/dist
+/build
+/main.spec
