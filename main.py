@@ -112,7 +112,6 @@ class Application(tk.Tk, Configure_widjets):
         self.bar1.pack(fill=tk.BOTH)
 
         self.bar = ttk.LabelFrame(self, text='Usage:')
-        #self.bar.config(borderwidth=25, relief="solid")
         self.bar.pack(pady=10, padx=10)
 
         self.bind_class('Tk', '<Enter>', self.enter_mouse)
