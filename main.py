@@ -11,7 +11,7 @@ def get_data_folder():
     appdata = os.getenv('APPDATA')
     if not appdata:
         appdata = os.path.expanduser('~')
-    data_folder = os.path.join(appdata, 'MyAppName')
+    data_folder = os.path.join(appdata, 'FeatherClipBoard')
     os.makedirs(data_folder, exist_ok=True)
     return data_folder
 
@@ -27,7 +27,7 @@ class EntryFrame(ttk.Entry):
         del_btn = ttk.Button(self, text="X", width=0, command=self.delete)
         del_btn.pack(side="left")
         self.entry.pack(side="left", expand=True, fill="both")
-        self.pack(fill=tk.X)
+        self.pack(fill=tk.X, ipadx=0, ipady=0)
         self.root = master.master
         self.entry.bind("<Enter>", self.on_enter)
         self.entry.bind("<Leave>", self.on_leave)
@@ -48,7 +48,7 @@ class EntryFrame(ttk.Entry):
         self.root.clipboard_append(self.entry.get())
         self.update()
 
-def find_all_children_of_type(widget, cls):
+def find_adjustment_children_of_type(widget, cls):
     found = []
     for child in widget.winfo_children():
         if isinstance(child, cls):
@@ -89,30 +89,31 @@ class Application(tk.Tk, Configure_widjets):
     def set_ui(self):
         """Build basic widgets and events."""
         ttk.Label(self, text=f'Featherclip + mini CPU RAM - pid:{os.getpid()}').pack(fill=tk.X)
-        self.bar2 = ttk.LabelFrame(self, text='Manual')
-        self.bar2.pack(fill=tk.X)
+        self.bar2 = ttk.Frame(self)
+        self.bar2.pack(fill=tk.X, ipady=0, ipadx=10)
 
         self.combo_win = ttk.Combobox(self.bar2,
                                     values=["hide", "don't hide"],
                                     width=9, state='readonly')
 
         self.combo_win.current(1)
-        self.combo_win.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
+        self.combo_win.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=(5,0), pady=(3,0))
 
         self.after(2000, self.auto_hide)
 
         ttk.Button(self.bar2, text='move',
-                    command=self.configure_win).pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
+                    command=self.configure_win).pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=(5,5), pady=(3,0))
 
-        ttk.Button(self.bar2, text='Exit', command=self.app_exit).pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
+        self.exit =ttk.Button(self.bar2, text='X', command=self.app_exit, width=2)
 
-        self.barManager = ttk.LabelFrame(self, text='Manager')
+        self.barManager = ttk.Frame(self)
         self.barManager.pack(fill=tk.BOTH)
-        self.bar1 = ttk.LabelFrame(self, text='Clipboard')
+        self.bar1 = ttk.LabelFrame(self, text='Clipboards:')
         self.bar1.pack(fill=tk.BOTH)
 
-        self.bar = ttk.LabelFrame(self, text='Power')
-        self.bar.pack(fill=tk.BOTH)
+        self.bar = ttk.LabelFrame(self, text='Usage:')
+        #self.bar.config(borderwidth=25, relief="solid")
+        self.bar.pack(pady=10, padx=10)
 
         self.bind_class('Tk', '<Enter>', self.enter_mouse)
         self.bind_class('Tk', '<Leave>', self.leave_mouse)
@@ -130,7 +131,6 @@ class Application(tk.Tk, Configure_widjets):
         self.clipborad_count = ttk.Label(self.bar1, text=f'{self.cnt} inputs:', anchor=tk.CENTER)
         self.clipborad_count.pack(fill=tk.X)
         path = get_clipboards_path()
-        print(path)
         if not os.path.exists(path):
             with open(path, "w", encoding="utf-8") as f:
                 f.write("{}")
@@ -138,27 +138,22 @@ class Application(tk.Tk, Configure_widjets):
             history = json.load(f)
         for text in history:
             self.add_new_frame(text)
-        add = ttk.Button(self.barManager, text="add from clipboard", command=self.add_from_clipboard)
-        add.pack(fill=tk.X)
+        add = ttk.Button(self.barManager, text="add new from clipboard", command=self.add_from_clipboard)
+        add.pack(fill=tk.X, padx=5, pady=5)
 
     def add_new_frame(self, text=""):
         fr = EntryFrame(self.bar1, text)
         self.cnt += 1
-        self.clipborad_count.configure(text=f'{self.cnt} inputs')
+        self.clipborad_count.configure(text=f'{self.cnt} inputs:')
         fr.pack(fill=tk.X)
 
     def del_frame(self):
         self.cnt -= 1
-        self.clipborad_count.configure(text=f'{self.cnt} inputs')
+        self.clipborad_count.configure(text=f'{self.cnt} inputs:')
 
     def add_from_clipboard(self):
         text = self.clipboard_get()
         self.add_new_frame(text)
-
-    def change_text(self, i):
-        self.clipboard_clear()
-        self.clipboard_append(self.inputs[i].get())
-        self.update()
 
     def make_bar_cpu_usage(self):
         """Creation of progress bars and labels to indicate the load of the CPU and RAM."""
@@ -189,7 +184,7 @@ class Application(tk.Tk, Configure_widjets):
         self.ram_bar_hide = ttk.Progressbar(self, length=95)
         self.ram_bar_hide.pack(side=tk.LEFT)
 
-        self.full = ttk.Button(self, text='full', width=5,
+        self.full = tk.Button(self, text='full', width=5, height=1,font=("Arial", 8), pady=0,
                     command=self.full_details)
 
         self.full.pack(side=tk.RIGHT, expand=True, fill=tk.BOTH)
@@ -206,24 +201,34 @@ class Application(tk.Tk, Configure_widjets):
             self.full.config(text="full")
             self.full.pack(side=tk.LEFT)
             self.combo.pack_forget()
+            self.save.pack_forget()
             self.combo_chose_color.pack_forget()
             self.top_hide.pack_forget()
+            self.save_top.pack_forget()
+            self.exit.pack_forget()
         else:
             self.bar_one.pack_forget()
             self.ram_bar_hide.pack_forget()
-            self.top_hide = ttk.Button(self.bar2, text='Hide', command=self.full_details)
-            self.top_hide.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
+            self.top_hide = ttk.Button(self.bar2, text='Hide', command=self.full_details, width=4)
+            self.top_hide.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, pady=(2,0))
             self.bar.pack(side=tk.TOP, fill=tk.BOTH)
             self.full.pack_forget()
             self.full.config(text="hide details")
             self.full.pack(side=tk.BOTTOM, fill=tk.BOTH)
 
+            self.save_top =ttk.Button(self.bar2, text='S', command=self.save_all, width=2)
+
+            self.save = ttk.Button(self, text='save', command=self.save_all)
+            self.save.pack(side=tk.BOTTOM, fill=tk.BOTH, pady=2)
+
             themes = self.style.theme_names()
             self.combo = ttk.Combobox(self, values=themes, state="readonly")
             self.combo.set(self.style.theme_use())
             
-            self.combo.pack(fill=tk.BOTH, side=tk.LEFT)
+            self.combo.pack(fill=tk.BOTH, side=tk.LEFT, expand=True, pady=(2,0))
             self.combo.bind("<<ComboboxSelected>>", self.change_theme)
+            self.save_top.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=(5,0), pady=(2,0))
+            self.exit.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=5, pady=(2,0))
 
             color_names = [
     'white', 'black', 'red', 'green', 'blue', 'yellow', 'cyan', 'magenta',
@@ -233,7 +238,7 @@ class Application(tk.Tk, Configure_widjets):
 
             self.combo_chose_color = ttk.Combobox(self, values=color_names, state="readonly")
             self.combo_chose_color.set('red')
-            self.combo_chose_color.pack(fill=tk.BOTH, side=tk.LEFT, expand=True)
+            self.combo_chose_color.pack(fill=tk.BOTH, side=tk.LEFT, expand=True, pady=(2,0))
             self.combo_chose_color.bind("<<ComboboxSelected>>", self.change_chose_color)
 
     def enter_mouse(self, event):
@@ -270,10 +275,7 @@ class Application(tk.Tk, Configure_widjets):
 
     def save_all(self, reserve=False):
         path = get_clipboards_path()
-        entries = find_all_children_of_type(self.bar1, EntryFrame)
-        print(len(entries))
-        for entry in entries:
-            print(entry.entry.get())
+        entries = find_adjustment_children_of_type(self.bar1, EntryFrame)
         history = [entry.entry.get() for entry in entries]
         if not reserve:
             with open(path, "w", encoding="utf-8") as f:
