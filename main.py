@@ -114,12 +114,13 @@ class Application(tk.Tk, Configure_widjets):
         self.combo_win.current(0)
     def make_word_list(self):
         """Creation of progress bars and labels to indicate the load of the CPU and RAM."""
-        default_cnt=5
         self.cnt=0
         
         self.clipborad_count = ttk.Label(self.bar1, text=f'{self.cnt} inputs:', anchor=tk.CENTER)
         self.clipborad_count.pack(fill=tk.X)
-
+        if not os.path.exists("clipboards.json"):
+            with open("clipboards.json", "w", encoding="utf-8") as f:
+                f.write("{}")
         with open("clipboards.json", "r", encoding="utf-8") as f:
             history = json.load(f)
         for text in history:
@@ -238,7 +239,10 @@ class Application(tk.Tk, Configure_widjets):
 
     def change_theme(self, event):
         selected = self.combo.get()
+
         self.style.theme_use(selected)
+        self.style.configure('DefualtFieldColor.TEntry', fieldbackground='white')
+        self.style.configure('ChosenField.TEntry', fieldbackground='red')
 
     def choise_combo(self, event):
         if self.combo_win.current() == 2:
